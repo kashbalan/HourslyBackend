@@ -1,4 +1,4 @@
-from db import db, User, Course, Assignment, UserToCourse
+from db import db, User, Course, Assignment, UserToCourse, OfficeHour, UserSavedOfficeHour
 from flask import Flask, request
 import json
 
@@ -47,11 +47,66 @@ def create_user():
 @app.route("/api/users/<int:user_id>/")
 def get_user(user_id):
     """
-    Endpoint for getting a user
+    Endpoint for getting a user (includes saved office hours)
     """
     user = User.query.filter_by(id=user_id).first()
     if user is None:
         return failure_response("User not found!", 404)
+    return success_response(user.serialize())
+
+@app.route("/api/users/<int:user_id>/save_officehour/", methods=["POST"])
+def save_office_hour(user_id):
+    """
+    Endpoint for a user to save a specific office hour slot
+    """
+    user = User.query.filter_by(id=user_id).first()
+    if user is None:
+        return failure_response("User not found!", 404)
+    
+    body = json.loads(request.data)
+    oh_id = body.get("oh_id")
+    
+    if oh_id is None:
+        return failure_response("Missing required field (oh_id)!", 400)
+
+    office_hour = OfficeHour.query.filter_by(id=oh_id).first()
+    if office_hour is None:
+        return failure_response("Office hour not found!", 404)
+        
+    existing_save = UserSavedOfficeHour.query.filter_by(user_id=user_id, oh_id=oh_id).first()
+    
+    if existing_save:
+        return failure_response("Office hour already saved by this user.", 400)
+
+    new_save = UserSavedOfficeHour(user_id=user_id, oh_id=oh_id)
+    db.session.add(new_save)
+    db.session.commit()
+    
+    return success_response(user.serialize(), 201)
+
+@app.route("/api/users/<int:user_id>/unsave_officehour/", methods=["POST"])
+def unsave_office_hour(user_id):
+    """
+    Endpoint for a user to unsave a specific office hour slot
+    """
+    user = User.query.filter_by(id=user_id).first()
+    if user is None:
+        return failure_response("User not found!", 404)
+    
+    body = json.loads(request.data)
+    oh_id = body.get("oh_id")
+    
+    if oh_id is None:
+        return failure_response("Missing required field (oh_id)!", 400)
+
+    saved_oh = UserSavedOfficeHour.query.filter_by(user_id=user_id, oh_id=oh_id).first()
+    
+    if saved_oh is None:
+        return failure_response("Saved office hour not found for this user.", 404)
+
+    db.session.delete(saved_oh)
+    db.session.commit()
+    
     return success_response(user.serialize())
 
 
@@ -85,7 +140,7 @@ def create_course():
 @app.route("/api/courses/<int:course_id>/")
 def get_course(course_id):
     """
-    Endpoint for getting a course
+    Endpoint for getting a course (includes TAs, OH, Assignments)
     """
     course = Course.query.filter_by(id=course_id).first()
     if course is None:
@@ -126,8 +181,8 @@ def add_user_to_course(course_id):
     if user is None:
         return failure_response("User not found!", 404)
     
-    if user_type not in ["student", "instructor"]:
-        return failure_response("Invalid user type!", 400)
+    if user_type not in ["student", "instructor", "TA"]:
+        return failure_response("Invalid user type! Must be 'student', 'instructor', or 'TA'.", 400)
 
     existing_uc = UserToCourse.query.filter_by(user_id=user_id, course_id=course_id).first()
     
@@ -142,6 +197,9 @@ def add_user_to_course(course_id):
         db.session.commit()
 
     return success_response(course.serialize())
+
+
+# -- ASSIGNMENT ROUTES --------------------------------------------------
 
 @app.route("/api/courses/<int:course_id>/assignment/", methods=["POST"])
 def create_assignment(course_id):
@@ -168,6 +226,44 @@ def create_assignment(course_id):
     db.session.add(new_assignment)
     db.session.commit()
     return success_response(new_assignment.serialize(), 201)
+
+# -- OFFICE HOUR ROUTES --------------------------------------------------
+
+@app.route("/api/courses/<int:course_id>/officehour/", methods=["POST"])
+def create_office_hour(course_id):
+    """
+    Endpoint for creating an office hour slot for a course
+    """
+    course = Course.query.filter_by(id=course_id).first()
+    if course is None:
+        return failure_response("Course not found!", 404)
+    
+    body = json.loads(request.data)
+    day = body.get("day")
+    start_time = body.get("start_time")
+    end_time = body.get("end_time")
+    location = body.get("location")
+    ta_id = body.get("ta_id")
+    
+    if not all([day, start_time, end_time, location, ta_id]):
+        return failure_response("Missing one or more required fields (day, start_time, end_time, location, ta_id)!", 400)
+
+    ta = User.query.filter_by(id=ta_id).first()
+    if ta is None:
+        return failure_response("TA user not found!", 404)
+        
+    new_oh = OfficeHour(
+        day=day, 
+        start_time=start_time, 
+        end_time=end_time,
+        location=location,
+        course_id=course_id,
+        ta_id=ta_id
+    )
+    
+    db.session.add(new_oh)
+    db.session.commit()
+    return success_response(new_oh.serialize(), 201)
 
 
 if __name__ == "__main__":
