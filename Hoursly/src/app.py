@@ -232,7 +232,8 @@ def create_assignment(course_id):
 @app.route("/api/courses/<int:course_id>/officehour/", methods=["POST"])
 def create_office_hour(course_id):
     """
-    Endpoint for creating an office hour slot for a course
+    Endpoint for creating an office hour slot for a course.
+    Includes validation to ensure ta_id is a TA for the course.
     """
     course = Course.query.filter_by(id=course_id).first()
     if course is None:
@@ -248,10 +249,17 @@ def create_office_hour(course_id):
     if not all([day, start_time, end_time, location, ta_id]):
         return failure_response("Missing one or more required fields (day, start_time, end_time, location, ta_id)!", 400)
 
+    # 1. Check if the TA user exists
     ta = User.query.filter_by(id=ta_id).first()
     if ta is None:
         return failure_response("TA user not found!", 404)
         
+    # 2. **NEW VALIDATION: Check if the user is a TA for this course**
+    ta_to_course = UserToCourse.query.filter_by(user_id=ta_id, course_id=course_id).first()
+    
+    if ta_to_course is None or ta_to_course.type != "TA":
+        return failure_response("User is not a valid TA for this course!", 403) # Use 403 Forbidden for authorization issues
+
     new_oh = OfficeHour(
         day=day, 
         start_time=start_time, 
