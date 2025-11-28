@@ -179,7 +179,7 @@ class Course(db.Model):
 
     def serialize_user_course(self):
         """
-        Seralize a course object (shallow for user/assignment)
+        Seralize a course object 
         """
         return {
             "id": self.id,
