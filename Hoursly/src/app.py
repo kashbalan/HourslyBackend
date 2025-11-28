@@ -199,33 +199,6 @@ def add_user_to_course(course_id):
     return success_response(course.serialize())
 
 
-# -- ASSIGNMENT ROUTES --------------------------------------------------
-
-@app.route("/api/courses/<int:course_id>/assignment/", methods=["POST"])
-def create_assignment(course_id):
-    """
-    Endpoint for creating a assignment
-    """
-    course = Course.query.filter_by(id=course_id).first()
-    if course is None:
-        return failure_response("Course not found!", 404)
-    
-    body = json.loads(request.data)
-    title = body.get("title")
-    due_date = body.get("due_date")
-    
-    if title is None or due_date is None:
-        return failure_response("Missing one or more required fields (title, due_date)!", 400)
-
-    try:
-        due_date = int(due_date)
-    except ValueError:
-        return failure_response("Due date must be an integer (UNIX timestamp)!", 400)
-
-    new_assignment = Assignment(title=title, due_date=due_date, course_id=course_id)
-    db.session.add(new_assignment)
-    db.session.commit()
-    return success_response(new_assignment.serialize(), 201)
 
 # -- OFFICE HOUR ROUTES --------------------------------------------------
 
