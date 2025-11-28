@@ -1,4 +1,4 @@
-from db import db, User, Course, Assignment, UserToCourse, OfficeHour, UserSavedOfficeHour
+from db import db, User, Course, Assignment, StudentToCourse, InstructorToCourse, OfficeHour, UserSavedOfficeHour
 from flask import Flask, request
 import json
 
@@ -164,7 +164,7 @@ def delete_course(course_id):
 @app.route("/api/courses/<int:course_id>/add/", methods=["POST"])
 def add_user_to_course(course_id):
     """
-    Endpoint for adding a user to a course
+    Endpoint for adding a user to a course.
     """
     course = Course.query.filter_by(id=course_id).first()
     if course is None:
@@ -184,20 +184,26 @@ def add_user_to_course(course_id):
     if user_type not in ["student", "instructor", "TA"]:
         return failure_response("Invalid user type! Must be 'student', 'instructor', or 'TA'.", 400)
 
-    existing_uc = UserToCourse.query.filter_by(user_id=user_id, course_id=course_id).first()
-    
-    if existing_uc:
+    if user_type == "student":
+        existing_stc = StudentToCourse.query.filter_by(user_id=user_id, course_id=course_id).first()
+        if not existing_stc:
+            new_stc = StudentToCourse(user_id=user_id, course_id=course_id)
+            db.session.add(new_stc)
+            db.session.commit()
+            
+    else: 
+        existing_itc = InstructorToCourse.query.filter_by(user_id=user_id, course_id=course_id).first()
         
-        if existing_uc.type != user_type:
-            existing_uc.type = user_type
-        db.session.commit()
-    else:
-        new_uc = UserToCourse(user_id=user_id, course_id=course_id, type=user_type)
-        db.session.add(new_uc)
-        db.session.commit()
+        if existing_itc:
+            if existing_itc.type != user_type:
+                existing_itc.type = user_type
+            db.session.commit()
+        else:
+            new_itc = InstructorToCourse(user_id=user_id, course_id=course_id, type=user_type)
+            db.session.add(new_itc)
+            db.session.commit()
 
     return success_response(course.serialize())
-
 
 
 # -- OFFICE HOUR ROUTES --------------------------------------------------
@@ -222,16 +228,15 @@ def create_office_hour(course_id):
     if not all([day, start_time, end_time, location, ta_id]):
         return failure_response("Missing one or more required fields (day, start_time, end_time, location, ta_id)!", 400)
 
-    # 1. Check if the TA user exists
+
     ta = User.query.filter_by(id=ta_id).first()
     if ta is None:
         return failure_response("TA user not found!", 404)
         
-    # 2. **NEW VALIDATION: Check if the user is a TA for this course**
-    ta_to_course = UserToCourse.query.filter_by(user_id=ta_id, course_id=course_id).first()
+    ta_to_course = InstructorToCourse.query.filter_by(user_id=ta_id, course_id=course_id).first()
     
     if ta_to_course is None or ta_to_course.type != "TA":
-        return failure_response("User is not a valid TA for this course!", 403) # Use 403 Forbidden for authorization issues
+        return failure_response("User is not a valid TA for this course!", 403) 
 
     new_oh = OfficeHour(
         day=day, 
