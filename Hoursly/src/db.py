@@ -193,37 +193,3 @@ class Course(db.Model):
         }
 
 
-# --- Assignment Model ---
-class Assignment(db.Model):
-    """
-    Assignment model
-    """
-    __tablename__ = "assignment"
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String, nullable=False)
-    due_date = db.Column(db.Integer, nullable=False) 
-    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
-    
-    course = db.relationship("Course")
-
-    def serialize(self):
-        """
-        Seralize an assignment object
-        """
-        return {
-            "id": self.id,
-            "title": self.title,
-            "due_date": self.due_date,
-            "course": self.course.serialize_user_course()
-        }
-
-    def serialize_course_assignment(self):
-        """
-        Seralize an assignment in a course object
-        """
-        return {
-            "id": self.id,
-            "title": self.title,
-            "due_date": self.due_date,
-            "course": None 
-        }
