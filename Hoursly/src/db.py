@@ -71,23 +71,42 @@ class OfficeHour(db.Model):
             "ta": self.ta.serialize_office_hour_ta()
         }
 
-# --- UserToCourse Model ---
-class UserToCourse(db.Model):
+# --- StudentToCourse Model ---
+class StudentToCourse(db.Model):
     """
-    UserToCourse model: Many-to-Many relationship between User and Course
+    StudentToCourse model: Links User (as student) to Course
     """
-    __tablename__ = "user_to_course"
+    __tablename__ = "student_to_course"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
-    type = db.Column(db.String, nullable=False) # "student", "instructor", or "TA"
     
-    user = db.relationship("User", back_populates="courses_in_user")
-    course = db.relationship("Course", back_populates="users_in_course")
+    user = db.relationship("User", back_populates="student_courses")
+    course = db.relationship("Course", back_populates="students_in_course")
 
     def serialize_course_in_user(self):
         """
-        Seralize a user's course object
+        Seralize a student's course object
+        """
+        return self.course.serialize_user_course()
+
+# --- InstructorToCourse Model ---
+class InstructorToCourse(db.Model):
+    """
+    InstructorToCourse model: Links User (as instructor or TA) to Course
+    """
+    __tablename__ = "instructor_to_course"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
+    type = db.Column(db.String, nullable=False)
+    
+    user = db.relationship("User", back_populates="instructor_courses")
+    course = db.relationship("Course", back_populates="instructors_in_course")
+
+    def serialize_course_in_user(self):
+        """
+        Seralize an instructor/TA's course object
         """
         return self.course.serialize_user_course()
 
