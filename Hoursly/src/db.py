@@ -168,7 +168,6 @@ class Course(db.Model):
     code = db.Column(db.String, nullable=False)
     name = db.Column(db.String, nullable=False)
     
-    assignments = db.relationship("Assignment", cascade="all, delete")
     users_in_course = db.relationship("UserToCourse", back_populates="course", cascade="all, delete")
     office_hours = db.relationship("OfficeHour", back_populates="course", cascade="all, delete")
 
@@ -189,7 +188,6 @@ class Course(db.Model):
             "id": self.id,
             "code": self.code,
             "name": self.name,
-            "assignments": [a.serialize_course_assignment() for a in self.assignments],
             "students": students,
             "instructors": instructors,
             "tas": tas,
@@ -204,7 +202,6 @@ class Course(db.Model):
             "id": self.id,
             "code": self.code,
             "name": self.name,
-            "assignments": None,
             "students": None,
             "instructors": None,
             "tas": None,
