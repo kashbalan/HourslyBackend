@@ -1,4 +1,4 @@
-from db import db, User, Course, Assignment, StudentToCourse, InstructorToCourse, OfficeHour, UserSavedOfficeHour
+from db import db, User, Course, StudentToCourse, InstructorToCourse, OfficeHour, UserSavedOfficeHour
 from flask import Flask, request
 import json
 
