@@ -121,7 +121,6 @@ class User(db.Model):
     name = db.Column(db.String, nullable=False)
     netid = db.Column(db.String, nullable=False)
     
-    # FIX: Replaced incorrect UserToCourse relationship with StudentToCourse and InstructorToCourse
     student_courses = db.relationship("StudentToCourse", back_populates="user", cascade="all, delete")
     instructor_courses = db.relationship("InstructorToCourse", back_populates="user", cascade="all, delete")
 
@@ -132,7 +131,6 @@ class User(db.Model):
         """
         Seralize a user object
         """
-        # FIX: Combine courses from both student and instructor/TA relationships
         all_courses = [c.serialize_course_in_user() for c in self.student_courses] + \
                       [c.serialize_course_in_user() for c in self.instructor_courses]
 
@@ -175,7 +173,6 @@ class Course(db.Model):
     code = db.Column(db.String, nullable=False)
     name = db.Column(db.String, nullable=False)
     
-    # FIX: Replaced incorrect UserToCourse relationship with StudentToCourse and InstructorToCourse
     students_in_course = db.relationship("StudentToCourse", back_populates="course", cascade="all, delete")
     instructors_in_course = db.relationship("InstructorToCourse", back_populates="course", cascade="all, delete")
     
@@ -185,12 +182,10 @@ class Course(db.Model):
         """
         Seralize a course object
         """
-        # FIX: Fetch students from the dedicated students_in_course relationship
         students = [
             uc.user.serialize_course_user() for uc in self.students_in_course
         ]
         
-        # FIX: Fetch instructors and TAs from the dedicated instructors_in_course relationship
         instructors = []
         tas = []
         for uc in self.instructors_in_course:
